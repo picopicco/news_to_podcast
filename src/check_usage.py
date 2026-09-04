@@ -68,15 +68,21 @@ def main():
     print(f"  月末までの予測: 約{projected:,.0f}文字")
     print()
 
-    # --- Drive storage (authoritative) ---
-    quota = drive_common.storage_quota(token)
-    used = int(quota.get("usage", 0))
-    limit = quota.get("limit")
+    # --- Drive storage (authoritative; may be unavailable with the
+    # narrow drive.file scope, which doesn't always expose account-wide
+    # quota) ---
     print("[Google Drive ストレージ] (ユーザー本人のアカウント)")
-    if limit:
-        print(" " + report_line("使用量", used, int(limit)))
-    else:
-        print(f"  使用量: {format_bytes(used)} (上限なし/無制限アカウント)")
+    try:
+        quota = drive_common.storage_quota(token)
+        used = int(quota.get("usage", 0))
+        limit = quota.get("limit")
+        if limit:
+            print(" " + report_line("使用量", used, int(limit)))
+        else:
+            print(f"  使用量: {format_bytes(used)} (上限なし/無制限アカウント)")
+    except Exception as e:
+        print(f"  取得できませんでした(スコープ不足の可能性): {e}", file=sys.stderr)
+        print("  取得できません(drive.fileスコープでは権限不足の場合があります)")
     print()
 
     print("[Instapaper API] 無料・従量課金なし (監視対象外)")
