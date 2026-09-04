@@ -1,37 +1,31 @@
-"""Shared Google Drive helpers used by the other scripts.
-
-Uploads happen as the user's own Google account via OAuth (refresh
-token), so files are owned by the user and count against their own
-Drive storage plan -- not a service account's.
+"""Shared Google Drive/service-account helpers used by the other scripts.
 
 Required env vars:
-  GOOGLE_OAUTH_CLIENT_ID
-  GOOGLE_OAUTH_CLIENT_SECRET
-  GOOGLE_OAUTH_REFRESH_TOKEN
-  GOOGLE_DRIVE_FOLDER_ID        target folder ID (owned by the user)
+  GOOGLE_SERVICE_ACCOUNT_JSON   full JSON key content (not a file path)
+  GOOGLE_DRIVE_FOLDER_ID        target folder ID (shared with the service
+                                 account's client_email as Editor)
 """
 import json
 import os
 
 import requests
+from google.auth.transport.requests import Request
+from google.oauth2 import service_account
 
 DRIVE_FILES_URL = "https://www.googleapis.com/drive/v3/files"
 DRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
-TOKEN_URL = "https://oauth2.googleapis.com/token"
+
+
+def get_credentials(scopes=("https://www.googleapis.com/auth/drive",)):
+    raw = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
+    info = json.loads(raw)
+    return service_account.Credentials.from_service_account_info(info, scopes=list(scopes))
 
 
 def get_token():
-    resp = requests.post(
-        TOKEN_URL,
-        data={
-            "client_id": os.environ["GOOGLE_OAUTH_CLIENT_ID"],
-            "client_secret": os.environ["GOOGLE_OAUTH_CLIENT_SECRET"],
-            "refresh_token": os.environ["GOOGLE_OAUTH_REFRESH_TOKEN"],
-            "grant_type": "refresh_token",
-        },
-    )
-    resp.raise_for_status()
-    return resp.json()["access_token"]
+    creds = get_credentials()
+    creds.refresh(Request())
+    return creds.token
 
 
 def folder_id():

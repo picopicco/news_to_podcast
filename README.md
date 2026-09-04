@@ -21,8 +21,8 @@ scheduler required.
    concatenation via stdlib `wave` -- no ffmpeg dependency) into one file,
    and logs the character count synthesized to `_usage_log.json` on Drive.
 4. `python src/upload_drive.py podcast_YYYYMMDD.wav "Podcast YYYY-MM-DD"`
-   Uploads to the configured Drive folder as the user's own account
-   (OAuth), so the file is owned by the user.
+   Uploads to the configured Drive folder (shared with the service
+   account as Editor).
 5. `python src/cleanup_old_files.py`
    Deletes podcast audio (`podcast_*`, `audio/*` mime type only) older
    than 15 days from that same folder. Scoped tightly so it can never
@@ -37,8 +37,7 @@ python src/check_usage.py
 Reports this month's Google Cloud TTS character usage (self-logged, since
 Cloud Monitoring access isn't required) against the combined
 Neural2/Studio/Chirp3-HD free tier (1,000,000 chars/month), and the
-user's actual Drive storage usage/limit (reflects any paid Google One
-plan) straight from the Drive API.
+service account's Drive storage usage against its own quota.
 
 ## Cost notes
 
@@ -49,22 +48,18 @@ plan) straight from the Drive API.
   cheaper than Chirp3-HD if that tier is ever exceeded: $16/$30 per 1M
   chars respectively). Requires a GCP billing account to be linked (won't
   be charged as long as usage stays under the free tier).
-- Google Drive: uploads happen as the user's own account via OAuth, so
-  storage is drawn from whatever plan the user already has (e.g. a paid
-  Google One plan), not a separate service-account allocation.
+- Google Drive: uploads happen as the service account, so storage is
+  drawn from the service account's own allocation rather than the user's
+  personal Google One plan. Files older than 15 days are auto-deleted, so
+  steady-state footprint stays small (well under typical quota).
 
 ## One-time setup
 
 1. Enable the Google Drive API on the GCP project.
 2. Link a billing account to the GCP project (required for Cloud TTS).
-3. Create a Drive folder for output in the user's own "My Drive"; copy
-   its folder ID from the URL.
-4. Configure the OAuth consent screen (External, publishing status "In
-   production" -- NOT "Testing", which revokes refresh tokens after 7
-   days) and create an OAuth client ID of type "Desktop app".
-5. Run `python scripts/oauth_setup.py <client_id> <client_secret>` once,
-   locally, to get a refresh token (one-time interactive browser consent).
-6. Store all secrets (see `config.example.env`) as environment secrets on
+3. Create a Drive folder for output; share it with the service account's
+   `client_email` as Editor; copy the folder ID from the URL.
+4. Store all secrets (see `config.example.env`) as environment secrets on
    the cloud routine.
 
 ## Required environment variables / secrets
@@ -74,8 +69,7 @@ environment secrets (not embedded in the prompt):
 
 - `INSTAPAPER_CONSUMER_KEY`, `INSTAPAPER_CONSUMER_SECRET`
 - `INSTAPAPER_USERNAME`, `INSTAPAPER_PASSWORD`
-- `GOOGLE_SERVICE_ACCOUNT_JSON` (full JSON key content, one line -- TTS only)
-- `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN` (Drive)
+- `GOOGLE_SERVICE_ACCOUNT_JSON` (full JSON key content, one line)
 - `GOOGLE_DRIVE_FOLDER_ID`
 - `VOICE_A`, `VOICE_B` (optional, Google TTS voice names)
 
