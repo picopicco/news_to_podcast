@@ -1,0 +1,12 @@
+{
+  "sandbox": {
+    "network": {
+      "allowedDomains": [
+        "www.instapaper.com",
+        "oauth2.googleapis.com",
+        "www.googleapis.com",
+        "texttospeech.googleapis.com"
+      ]
+    }
+  }
+}
