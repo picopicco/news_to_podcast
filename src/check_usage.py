@@ -50,7 +50,7 @@ def main():
     this_month_chars = sum(
         entry["chars"]
         for entry in log.get("tts_chars", [])
-        if datetime.date.fromisoformat(entry["date"]) >= month_start
+        if datetime.datetime.strptime(entry["date"], "%Y-%m-%d").date() >= month_start
     )
     days_in_month = calendar.monthrange(today.year, today.month)[1]
 
