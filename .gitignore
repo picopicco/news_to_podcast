@@ -3,5 +3,5 @@ __pycache__/
 .env
 *.wav
 *.mp3
-articles.json
-dialogue.json
+articles*.json
+dialogue*.json
