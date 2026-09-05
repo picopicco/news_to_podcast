@@ -32,8 +32,10 @@ SAMPLE_RATE_HZ = 24000
 SILENCE_MS_BETWEEN_TURNS = 350
 
 DEFAULT_VOICES = {
-    "A": os.environ.get("VOICE_A", "ja-JP-Neural2-B"),
-    "B": os.environ.get("VOICE_B", "ja-JP-Neural2-C"),
+    # `or` (not a dict default) so an empty-but-set env var still falls
+    # back instead of sending an empty voice name to the API.
+    "A": os.environ.get("VOICE_A") or "ja-JP-Chirp3-HD-Charon",
+    "B": os.environ.get("VOICE_B") or "ja-JP-Chirp3-HD-Leda",
 }
 
 
