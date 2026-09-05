@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 
@@ -102,7 +103,12 @@ def fetch_articles(now=None):
     articles = []
     for b in targets:
         text_body = urllib.parse.urlencode({"bookmark_id": b["bookmark_id"]})
-        resp2, content2 = client.request(TEXT_URL, method="POST", body=text_body)
+        resp2, content2 = None, None
+        for attempt in range(3):
+            resp2, content2 = client.request(TEXT_URL, method="POST", body=text_body)
+            if resp2.status == 200:
+                break
+            time.sleep(2 * (attempt + 1))
         if resp2.status != 200:
             print(
                 f"warning: get_text failed for {b['bookmark_id']}: {resp2.status}",

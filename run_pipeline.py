@@ -27,7 +27,15 @@ def load_env(path):
 
 def run(args, **kwargs):
     print(f"+ {' '.join(str(a) for a in args)}", flush=True)
-    subprocess.run(args, check=True, **kwargs)
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
+    subprocess.run(args, check=True, env=env, **kwargs)
+
+
+def safe_unlink(path):
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
 
 
 def main():
@@ -42,7 +50,7 @@ def main():
     data = json.loads(articles_path.read_text(encoding="utf-8"))
     if data["article_count"] == 0:
         print("no unread articles saved in the last 24 hours, nothing to synthesize")
-        articles_path.unlink(missing_ok=True)
+        safe_unlink(articles_path)
         return
 
     run([sys.executable, str(SRC / "summarize.py"), str(articles_path), str(dialogue_path)])
@@ -50,13 +58,13 @@ def main():
     date_str = data["window_end_jst"][:10]
     out_wav = ROOT / f"podcast_{date_str.replace('-', '')}.wav"
     run([sys.executable, str(SRC / "synthesize.py"), str(dialogue_path), str(out_wav)])
-    run([sys.executable, str(SRC / "upload_drive.py"), str(out_wav), f"Podcast {date_str}"])
+    run([sys.executable, str(SRC / "upload_drive.py"), str(out_wav), out_wav.name])
     run([sys.executable, str(SRC / "cleanup_old_files.py")])
 
     print(f"done: {data['article_count']} article(s) covered, uploaded {out_wav.name}")
 
     for p in (articles_path, dialogue_path, out_wav):
-        p.unlink(missing_ok=True)
+        safe_unlink(p)
 
 
 if __name__ == "__main__":

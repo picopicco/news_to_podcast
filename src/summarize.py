@@ -3,7 +3,7 @@ using the Gemini API (free tier, separate from Cloud Billing).
 
 Required env vars:
   GEMINI_API_KEY
-  GEMINI_MODEL   optional, defaults to gemini-2.5-flash
+  GEMINI_MODEL   optional, defaults to gemini-3.6-flash
 
 Usage:
   python summarize.py articles.json dialogue.json
@@ -14,7 +14,7 @@ import sys
 
 import requests
 
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 API_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 )
