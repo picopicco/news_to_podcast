@@ -1,5 +1,7 @@
 """Fetch Instapaper bookmarks that are unread and were saved within the
-last 24 hours, and dump their article text as JSON.
+last 24 hours, and dump their article text as JSON. Checks both of
+Instapaper's default folders (Home/"unread" and "archive"), since a
+bookmark can be archived without ever having been read.
 
 Required env vars:
   INSTAPAPER_CONSUMER_KEY
@@ -75,21 +77,30 @@ def clean_html(html):
     return text.strip()
 
 
+def list_bookmarks(client, folder_id):
+    params = urllib.parse.urlencode({"folder_id": folder_id, "limit": 500})
+    resp, content = client.request(f"{BOOKMARKS_URL}?{params}", method="POST")
+    if resp.status != 200:
+        raise RuntimeError(f"bookmarks/list ({folder_id}) failed: {resp.status} {content!r}")
+    items = json.loads(content.decode())
+    return [b for b in items if b.get("type") == "bookmark"]
+
+
 def fetch_articles(now=None):
     window_start, window_end = window_bounds(now)
     ts_start = int(window_start.timestamp())
     ts_end = int(window_end.timestamp())
 
     client = get_client()
-    # folder_id="unread" is Instapaper's default reading-list view (not
-    # archived, not starred-only).
-    params = urllib.parse.urlencode({"folder_id": "unread", "limit": 500})
-    resp, content = client.request(f"{BOOKMARKS_URL}?{params}", method="POST")
-    if resp.status != 200:
-        raise RuntimeError(f"bookmarks/list failed: {resp.status} {content!r}")
-
-    items = json.loads(content.decode())
-    bookmarks = [b for b in items if b.get("type") == "bookmark"]
+    # Instapaper's two default folders: "unread" (the Home reading list)
+    # and "archive". A bookmark saved-and-archived without ever being
+    # opened is still unread (progress 0) but only shows up under
+    # folder_id="archive", so both must be checked.
+    bookmarks_by_id = {}
+    for folder in ("unread", "archive"):
+        for b in list_bookmarks(client, folder):
+            bookmarks_by_id[b["bookmark_id"]] = b
+    bookmarks = list(bookmarks_by_id.values())
 
     targets = [
         b
