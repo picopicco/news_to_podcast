@@ -11,7 +11,6 @@ Required env vars:
   GOOGLE_OAUTH_REFRESH_TOKEN
   GOOGLE_DRIVE_FOLDER_ID        target folder ID (owned by the user)
 """
-import json
 import os
 
 import requests
@@ -39,20 +38,6 @@ def folder_id():
     return os.environ["GOOGLE_DRIVE_FOLDER_ID"]
 
 
-def find_file(token, name, parent_id=None):
-    """Return the first non-trashed Drive file matching `name` (and parent, if given), or None."""
-    parent_id = parent_id or folder_id()
-    query = f"name = '{name}' and '{parent_id}' in parents and trashed = false"
-    resp = requests.get(
-        DRIVE_FILES_URL,
-        headers={"Authorization": f"Bearer {token}"},
-        params={"q": query, "fields": "files(id, name, modifiedTime, mimeType)"},
-    )
-    resp.raise_for_status()
-    files = resp.json().get("files", [])
-    return files[0] if files else None
-
-
 def list_files(token, parent_id=None, extra_query=None, fields="files(id, name, modifiedTime, mimeType, size)"):
     parent_id = parent_id or folder_id()
     query = f"'{parent_id}' in parents and trashed = false"
@@ -74,53 +59,6 @@ def list_files(token, parent_id=None, extra_query=None, fields="files(id, name, 
         if not page_token:
             break
     return files
-
-
-def download_file_content(token, file_id):
-    resp = requests.get(
-        f"{DRIVE_FILES_URL}/{file_id}",
-        headers={"Authorization": f"Bearer {token}"},
-        params={"alt": "media"},
-    )
-    resp.raise_for_status()
-    return resp.content
-
-
-def download_json(token, name, parent_id=None, default=None):
-    existing = find_file(token, name, parent_id)
-    if not existing:
-        return default
-    content = download_file_content(token, existing["id"])
-    return json.loads(content.decode("utf-8"))
-
-
-def upload_json(token, name, data, parent_id=None):
-    parent_id = parent_id or folder_id()
-    existing = find_file(token, name, parent_id)
-    payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
-
-    if existing:
-        update_url = f"https://www.googleapis.com/upload/drive/v3/files/{existing['id']}?uploadType=multipart"
-        resp = requests.patch(
-            update_url,
-            headers={"Authorization": f"Bearer {token}"},
-            files={
-                "metadata": ("metadata", json.dumps({"name": name}), "application/json"),
-                "file": (name, payload, "application/json"),
-            },
-        )
-    else:
-        metadata = {"name": name, "parents": [parent_id]}
-        resp = requests.post(
-            DRIVE_UPLOAD_URL,
-            headers={"Authorization": f"Bearer {token}"},
-            files={
-                "metadata": ("metadata", json.dumps(metadata), "application/json"),
-                "file": (name, payload, "application/json"),
-            },
-        )
-    resp.raise_for_status()
-    return resp.json()
 
 
 def delete_file(token, file_id):

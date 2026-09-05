@@ -16,7 +16,6 @@ Input: a JSON file with a list of turns:
 Usage:
   python synthesize.py dialogue.json podcast_20260713.wav
 """
-import datetime
 import io
 import json
 import os
@@ -26,7 +25,7 @@ import wave
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
-import drive_common
+import usage_log
 
 SAMPLE_RATE_HZ = 24000
 SILENCE_MS_BETWEEN_TURNS = 350
@@ -105,21 +104,6 @@ def build_podcast(turns, out_path):
     return total_chars
 
 
-def log_tts_usage(chars):
-    """Append today's TTS character count to _usage_log.json in the Drive
-    folder, so check_usage.py can report cumulative monthly usage without
-    needing Cloud Monitoring access. Best-effort: never fails the run."""
-    try:
-        token = drive_common.get_token()
-        log = drive_common.download_json(token, "_usage_log.json", default={"tts_chars": []})
-        log.setdefault("tts_chars", []).append(
-            {"date": datetime.date.today().isoformat(), "chars": chars}
-        )
-        drive_common.upload_json(token, "_usage_log.json", log)
-    except Exception as e:
-        print(f"warning: failed to log usage: {e}", file=sys.stderr)
-
-
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("usage: synthesize.py dialogue.json out.wav", file=sys.stderr)
@@ -129,5 +113,5 @@ if __name__ == "__main__":
         turns = json.load(f)
 
     chars = build_podcast(turns, sys.argv[2])
-    log_tts_usage(chars)
+    usage_log.append("tts_chars", chars=chars)
     print(f"wrote {sys.argv[2]} ({chars} chars synthesized)", file=sys.stderr)

@@ -5,3 +5,4 @@ __pycache__/
 *.mp3
 articles*.json
 dialogue*.json
+usage_log.json

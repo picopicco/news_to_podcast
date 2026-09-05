@@ -23,7 +23,7 @@ never actually run there.
 3. `src/synthesize.py` -- synthesizes each turn with Google Cloud TTS
    (fixed sample rate, WAV concatenation via stdlib `wave` -- no ffmpeg
    dependency) into one file, and logs the character count synthesized
-   to `_usage_log.json` on Drive.
+   to `usage_log.json` locally.
 4. `src/upload_drive.py` -- uploads to the configured Drive folder as
    the user's own account (OAuth), so the file is owned by the user.
 5. `src/cleanup_old_files.py` -- deletes podcast audio (`podcast_*`,
@@ -40,20 +40,26 @@ runs once a day; it loads credentials from a local `.env` file.
 python src/check_usage.py
 ```
 
-Reports this month's Google Cloud TTS character usage (self-logged)
-against the combined Neural2/Studio/Chirp3-HD free tier (1,000,000
-chars/month), and the user's Drive storage usage where the `drive.file`
-scope allows reading it.
+A double-clickable copy lives at `~/Desktop/ポッドキャスト利用状況確認.bat`
+(source in `scripts/check_usage_launcher.bat`). Reports this month's
+Google Cloud TTS character usage and Gemini API token usage (both
+self-logged locally to `usage_log.json`, gitignored) against known free
+tiers/pricing, plus the user's real Drive storage usage. Gemini moved to
+a prepaid-credit billing model with no simple balance-read API, so check
+https://aistudio.google.com/projects for the actual remaining credit.
 
 ## Cost notes
 
 - Instapaper API: free.
-- Summarization/dialogue writing: Gemini API free tier (separate from
-  Cloud Billing; rate-limited but ample for one run/day).
-- Google Cloud TTS: free up to 1M chars/month (Neural2 used by default,
-  cheaper than Chirp3-HD if that tier is ever exceeded: $16/$30 per 1M
-  chars respectively). Requires a GCP billing account to be linked (won't
-  be charged as long as usage stays under the free tier).
+- Summarization/dialogue writing: Gemini API, prepaid-credit billing
+  (separate from Cloud Billing). Usage is tiny (one call/day), so cost
+  should stay negligible, but it is no longer a strict free tier --
+  check remaining credit at https://aistudio.google.com/projects.
+- Google Cloud TTS: free up to 1M chars/month (Chirp3-HD used by
+  default for more natural voices; $30/1M chars beyond that, or switch
+  `VOICE_A`/`VOICE_B` to Neural2 for $16/1M if that ever matters).
+  Requires a GCP billing account to be linked (won't be charged as long
+  as usage stays under the free tier).
 - Google Drive: uploads happen as the user's own account via OAuth (a
   bare service account has zero Drive storage quota and cannot own
   files at all), so storage is drawn from whatever plan the user

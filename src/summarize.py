@@ -14,6 +14,8 @@ import sys
 
 import requests
 
+import usage_log
+
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 API_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
@@ -88,6 +90,14 @@ def generate_dialogue(articles, date):
 
     data = resp.json()
     text = data["candidates"][0]["content"]["parts"][0]["text"]
+    usage = data.get("usageMetadata", {})
+    usage_log.append(
+        "gemini_tokens",
+        prompt_tokens=usage.get("promptTokenCount", 0),
+        output_tokens=usage.get("candidatesTokenCount", 0),
+        total_tokens=usage.get("totalTokenCount", 0),
+        model=GEMINI_MODEL,
+    )
     return json.loads(text)
 
 
